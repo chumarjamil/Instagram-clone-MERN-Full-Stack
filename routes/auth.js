@@ -3,6 +3,7 @@ const router = express.Router()
 const mongoose = require('mongoose')
 const User = mongoose.model("User")
 const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 
 //Example / route
 // router.get('/', (req, res) => {
@@ -10,35 +11,66 @@ const bcrypt = require('bcryptjs')
 // })
 
 router.post('/signup', (req, res) => {
-    const { name, email, password } = req.body
-
+    const { name, email, password, pic } = req.body
     if (!email || !password || !name) {
-        return res.status(422).json({ error: "Please add all the fields" })
+        return res.status(422).json({ error: "please add all the fields" })
     }
-    // res.json({ message: "Scuessfully posted" })
     User.findOne({ email: email })
         .then((savedUser) => {
             if (savedUser) {
-                return res.status(422).json({ error: "User email already exsist" })
+                return res.status(422).json({ error: "user already exists with that email" })
             }
-            bcrypt.hash(password, 20) //bigger the number 20 or any number then more it will give secuirty to password
-                .then(hasedpassword => {
+            bcrypt.hash(password, 12)
+                .then(hashedpassword => {
                     const user = new User({
                         email,
-                        password,
-                        name
+                        password: hashedpassword,
+                        name,
+                        pic
                     })
+
                     user.save()
                         .then(user => {
-                            res.json({ message: "Saved Scuessfully" })
+                            // transporter.sendMail({
+                            //     to:user.email,
+                            //     from:"no-reply@insta.com",
+                            //     subject:"signup success",
+                            //     html:"<h1>welcome to instagram</h1>"
+                            // })
+                            res.json({ message: "saved successfully" })
                         })
                         .catch(err => {
                             console.log(err)
                         })
                 })
+
         })
         .catch(err => {
             console.log(err)
+        })
+})
+
+router.post('/sigin', (req, res) => {
+    const { email, password } = req.body
+    if (!email || !password) {
+        return res.status(422).json({ error: "Please add email or password" })
+    }
+    User.findOne({ email: email })
+        .then(savedUser => {
+            if (!savedUser) {
+                return res.status(422).json({ error: "Invalid email or password" })
+            }
+            bcrypt.compare(password, savedUser.password)
+                .then(doMatch => {
+                    if (doMatch) {
+                        res.json({ message: "Succesfully signined in" })
+                    } else {
+                        return res.status(422).json({ error: "Invalid email or password" })
+                    }
+                })
+                .catch(err => {
+                    console.log(err)
+                })
         })
 })
 
